@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: visionforge
+      POSTGRES_USER: visionforge
+      POSTGRES_PASSWORD: visionforge
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+  backend:
+    build:
+      context: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      DATABASE_URL: postgresql://visionforge:visionforge@postgres:5432/visionforge
+      REDIS_URL: redis://redis:6379/0
+      AI_MOCK_MODE: 'true'
+      AI_DEVICE: cpu
+      APP_ENV: development
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build:
+      context: ./backend
+    command: celery -A app.worker worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://visionforge:visionforge@postgres:5432/visionforge
+      REDIS_URL: redis://redis:6379/0
+      AI_MOCK_MODE: 'true'
+      AI_DEVICE: cpu
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+    command: npm run dev
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

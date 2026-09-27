@@ -1,0 +1,17 @@
+# .gitignore
+
+.env
+.env.local
+.env.*.local
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.venv/
+node_modules/
+.next/
+out/
+coverage/
+.DS_Store
+*.log
